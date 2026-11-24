@@ -32,10 +32,12 @@ public class CsvExport {
         for (Map<String, Object> row : rows) {
             String note = "";
             if (row.get("raw_points") != null) {
-                double n = ((BigDecimal) row.get("raw_points")).doubleValue()
-                        / ((BigDecimal) row.get("max_points")).doubleValue() * 20;
-                n = Math.floor(n * 10) / 10;
-                note = String.valueOf(n).replace('.', ',');
+                BigDecimal n = GradeCalculator.penalizedGradeOutOf20(
+                        (BigDecimal) row.get("raw_points"),
+                        (BigDecimal) row.get("max_points"),
+                        ((java.sql.Date) row.get("deadline")).toLocalDate(),
+                        ((java.sql.Timestamp) row.get("submitted_at")).toLocalDateTime());
+                note = String.valueOf(n.doubleValue()).replace('.', ',');
             }
             csv.append(row.get("reference")).append(';')
                     .append(row.get("full_name")).append(';')
