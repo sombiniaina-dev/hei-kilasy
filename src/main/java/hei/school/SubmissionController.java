@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.mail.SimpleMailMessage;
@@ -19,6 +20,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.client.RestClient;
 
 @RestController
 public class SubmissionController {
@@ -28,6 +30,8 @@ public class SubmissionController {
 
     @Autowired
     private JavaMailSender mailSender;
+
+    private final RestClient restClient = RestClient.create();
 
     @PostMapping("/exercises/{id}/submissions")
     public ResponseEntity<?> submit(@PathVariable long id, @RequestBody Map<String, Object> body) {
@@ -153,6 +157,25 @@ public class SubmissionController {
         message.setText(text);
         mailSender.send(message);
         System.out.println("Email de note envoyé à " + row.get("email"));
+
+        String phone = (String) row.get("phone");
+        if(phone != null && !phone.isBlank()) {
+            String smsText =  "Bonjour " + firstName + ",\n\n"
+                    + "Ta note pour « " + title + " » est disponible : " + grade + "/20.\n";
+            Map<String, String> smsPayload = Map.of(
+                    "to", phone,
+                    "text", smsText
+            );
+            restClient.post()
+                    .uri("https://fournisseur-sms.com")
+                    .header("Authorization", "Bearer VOTRE_CLE_API")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(smsPayload)
+                    .retrieve()
+                    .toBodilessEntity();
+
+            System.out.println("SMS de note envoyé à " + phone);
+        }
 
         Map<String, Object> result = new HashMap<>();
         result.put("id", id);
