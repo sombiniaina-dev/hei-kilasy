@@ -32,22 +32,32 @@ public class GradeReport {
         Map<String, Object> student = students.get(0);
 
         List<Map<String, Object>> rows = jdbcTemplate.queryForList(
-                "SELECT e.title, e.deadline, e.max_points, s.id AS submission_id, s.submitted_at, s.raw_points, s.feedback "
+                "SELECT e.title, e.deadline, e.duration_minutes, e.max_points, s.id AS submission_id, s.submitted_at, s.raw_points, s.feedback, "
+                        + "es.started_at "
                         + "FROM exercise e LEFT JOIN submission s ON s.exercise_id = e.id AND s.student_id = ? "
-                        + "ORDER BY e.deadline",
-                studentId);
+                        + "LEFT JOIN exercise_start es ON es.exercise_id = e.id AND es.student_id = ? "
+                        + "ORDER BY e.deadline NULLS LAST, e.id",
+                studentId, studentId);
 
         List<Map<String, Object>> lines = new ArrayList<>();
         BigDecimal total = BigDecimal.ZERO;
         int graded = 0;
         for (Map<String, Object> row : rows) {
             Map<String, Object> line = new LinkedHashMap<>();
-            LocalDate deadline = ((Date) row.get("deadline")).toLocalDate();
+            LocalDate deadline = row.get("deadline") == null ? null : ((Date) row.get("deadline")).toLocalDate();
+            Integer durationMinutes = (Integer) row.get("duration_minutes");
+            LocalDateTime startedAt = row.get("started_at") == null ? null : ((Timestamp) row.get("started_at")).toLocalDateTime();
             line.put("exercise", row.get("title"));
             line.put("deadline", deadline);
+            if (durationMinutes != null) {
+                line.put("durationMinutes", durationMinutes);
+            }
 
             if (row.get("submission_id") == null) {
-                if (deadline.isBefore(LocalDate.now())) {
+                boolean deadlinePassed = deadline != null && deadline.isBefore(LocalDate.now());
+                boolean timeExpired = durationMinutes != null && startedAt != null
+                        && LocalDateTime.now().isAfter(startedAt.plusMinutes(durationMinutes));
+                if (deadlinePassed || timeExpired) {
                     line.put("status", "NON RENDU");
                 } else {
                     line.put("status", "À RENDRE");
@@ -56,7 +66,12 @@ public class GradeReport {
             } else {
                 LocalDateTime submittedAt = ((Timestamp) row.get("submitted_at")).toLocalDateTime();
                 line.put("submittedAt", submittedAt);
-                line.put("late", submittedAt.toLocalDate().isAfter(deadline));
+                line.put("late", GradeCalculator.isLate(deadline, submittedAt));
+                if (durationMinutes != null && startedAt != null) {
+                    long seconds = Math.max(0, java.time.Duration.between(startedAt, submittedAt).getSeconds());
+                    line.put("timeUsedMinutes", BigDecimal.valueOf(seconds)
+                            .divide(new BigDecimal("60"), 1, RoundingMode.HALF_UP));
+                }
                 if (row.get("raw_points") == null) {
                     line.put("status", "EN ATTENTE DE CORRECTION");
                     line.put("grade", null);

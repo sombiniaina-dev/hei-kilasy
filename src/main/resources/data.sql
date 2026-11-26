@@ -40,3 +40,6 @@ SELECT setval(pg_get_serial_sequence('teacher', 'id'), (SELECT MAX(id) FROM teac
 SELECT setval(pg_get_serial_sequence('student', 'id'), (SELECT MAX(id) FROM student));
 SELECT setval(pg_get_serial_sequence('exercise', 'id'), (SELECT MAX(id) FROM exercise));
 SELECT setval(pg_get_serial_sequence('submission', 'id'), (SELECT MAX(id) FROM submission));
+
+UPDATE exercise SET duration_minutes = 60 WHERE id IN (1, 2, 3);
+UPDATE exercise SET duration_minutes = 90 WHERE id = 4;

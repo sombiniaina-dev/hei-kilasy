@@ -25,7 +25,7 @@ public class CsvExport {
                 "SELECT st.reference, st.full_name, st.email, st.cohort, e.title, e.deadline, s.submitted_at, s.raw_points, e.max_points, "
                         + "(s.submitted_at::date > e.deadline) AS late "
                         + "FROM submission s JOIN student st ON st.id = s.student_id JOIN exercise e ON e.id = s.exercise_id "
-                        + "ORDER BY st.full_name, e.deadline");
+                        + "ORDER BY st.full_name, e.deadline NULLS LAST, e.id");
 
         StringBuilder csv = new StringBuilder();
         csv.append("reference;etudiant;email;promotion;exercice;echeance;soumis_le;en_retard;note_sur_20\n");
@@ -35,7 +35,7 @@ public class CsvExport {
                 BigDecimal n = GradeCalculator.penalizedGradeOutOf20(
                         (BigDecimal) row.get("raw_points"),
                         (BigDecimal) row.get("max_points"),
-                        ((java.sql.Date) row.get("deadline")).toLocalDate(),
+                        row.get("deadline") == null ? null : ((java.sql.Date) row.get("deadline")).toLocalDate(),
                         ((java.sql.Timestamp) row.get("submitted_at")).toLocalDateTime());
                 note = String.valueOf(n.doubleValue()).replace('.', ',');
             }
@@ -44,7 +44,7 @@ public class CsvExport {
                     .append(row.get("email")).append(';')
                     .append(row.get("cohort")).append(';')
                     .append(row.get("title")).append(';')
-                    .append(row.get("deadline")).append(';')
+                    .append(row.get("deadline") == null ? "" : row.get("deadline")).append(';')
                     .append(row.get("submitted_at")).append(';')
                     .append(Boolean.TRUE.equals(row.get("late")) ? "oui" : "non").append(';')
                     .append(note).append('\n');

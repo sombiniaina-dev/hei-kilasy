@@ -8,6 +8,10 @@ import java.time.temporal.ChronoUnit;
 
 public final class GradeCalculator {
 
+    public static boolean isLate(LocalDate deadline, LocalDateTime submittedAt) {
+        return deadline != null && submittedAt.toLocalDate().isAfter(deadline);
+    }
+
     public static BigDecimal penalizedGradeOutOf20(BigDecimal rawPoints, BigDecimal maxPoints, LocalDate deadline, LocalDateTime submittedAt) {
         BigDecimal base20 = rawPoints
                 .multiply(new BigDecimal("20"))

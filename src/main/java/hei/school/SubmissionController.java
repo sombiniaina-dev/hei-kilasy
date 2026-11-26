@@ -66,6 +66,23 @@ public class SubmissionController {
         LocalDateTime now = LocalDateTime.now();
         boolean late = now.toLocalDate().isAfter(deadline);
 
+        Integer durationMinutes = (Integer) exercises.get(0).get("duration_minutes");
+        if (durationMinutes != null) {
+            List<Timestamp> starts = jdbcTemplate.queryForList(
+                    "SELECT started_at FROM exercise_start WHERE exercise_id = ? AND student_id = ?",
+                    Timestamp.class, id, studentId);
+            if (starts.isEmpty()) {
+                return ResponseEntity.unprocessableEntity().body(Map.of("error",
+                        "Cet exercice est minuté : démarrez-le d'abord avec POST /exercises/" + id + "/start"));
+            }
+            LocalDateTime endsAt = starts.get(0).toLocalDateTime().plusMinutes(durationMinutes);
+            if (now.isAfter(endsAt)) {
+                return ResponseEntity.unprocessableEntity().body(Map.of("error",
+                        "Temps écoulé : la durée de " + durationMinutes + " minutes s'est terminée à " + endsAt
+                                + ", la soumission est refusée"));
+            }
+        }
+
         jdbcTemplate.update(
                 "INSERT INTO submission (exercise_id, student_id, content, repo_url, submitted_at) VALUES (?, ?, ?, ?, ?)",
                 id, studentId, content, repoUrl, Timestamp.valueOf(now));

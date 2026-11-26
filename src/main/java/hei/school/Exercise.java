@@ -10,6 +10,15 @@ public class Exercise {
     private String description;
     private double maxPoints;
     private LocalDate deadline;
+    private Integer durationMinutes;
+
+    public Integer getDurationMinutes() {
+        return durationMinutes;
+    }
+
+    public void setDurationMinutes(Integer durationMinutes) {
+        this.durationMinutes = durationMinutes;
+    }
 
     public Long getId() {
         return id;
